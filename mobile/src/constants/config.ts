@@ -18,11 +18,20 @@ export const MAX_GEOFENCE_REGIONS = 20;
 /** Distance (meters) the driver must move before recalculating nearest regions */
 export const RECALCULATE_DISTANCE_M = 5000;
 
-/** Minimum dwell time (ms) — ignore enter+exit under 5 minutes */
-export const MIN_DWELL_MS = 5 * 60 * 1000;
+/** Minimum dwell time (ms) — ignore enter+exit under 10 minutes */
+export const MIN_DWELL_MS = 10 * 60 * 1000;
 
-/** Fallback: time in radius before prompting (ms) — 3 minutes */
-export const FALLBACK_PROMPT_MS = 3 * 60 * 1000;
+/** Fallback: time in radius before prompting (ms) — 10 minutes */
+export const FALLBACK_PROMPT_MS = 10 * 60 * 1000;
+
+/** Speed check: max km/h to consider driver stopped (not passing by) */
+export const SPEED_THRESHOLD_KMH = 5;
+
+/** Speed check: number of GPS readings */
+export const SPEED_CHECK_READINGS = 3;
+
+/** Speed check: interval between readings (ms) */
+export const SPEED_CHECK_INTERVAL_MS = 10_000;
 
 /** AsyncStorage key for pending offline events */
 export const PENDING_EVENTS_KEY = "waitino_pending_events";

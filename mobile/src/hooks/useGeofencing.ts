@@ -67,10 +67,10 @@ export function useGeofencing() {
       await recalculateIfNeeded();
     }, 2 * 60 * 1000);
 
-    // Fallback proximity check every 3 minutes
+    // Fallback proximity check every 10 minutes
     fallbackInterval.current = setInterval(async () => {
       await checkFallbackProximity();
-    }, 3 * 60 * 1000);
+    }, 10 * 60 * 1000);
   }, []);
 
   const shutdown = useCallback(async () => {

@@ -10,6 +10,9 @@ import {
   MIN_DWELL_MS,
   PENDING_EVENTS_KEY,
   ENTER_TIMESTAMPS_KEY,
+  SPEED_THRESHOLD_KMH,
+  SPEED_CHECK_READINGS,
+  SPEED_CHECK_INTERVAL_MS,
 } from "../constants/config";
 
 // ── Haversine distance (meters) ────────────────────────
@@ -92,6 +95,56 @@ async function clearEnterTimestamp(warehouseId: number): Promise<void> {
   await AsyncStorage.setItem(ENTER_TIMESTAMPS_KEY, JSON.stringify(map));
 }
 
+// ── Speed check (prevent false triggers from passing by) ──
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Takes multiple GPS readings over ~30 seconds and calculates average speed.
+ * Returns speed in km/h, or null if readings failed.
+ */
+async function measureSpeed(): Promise<number | null> {
+  try {
+    const readings: { lat: number; lng: number; time: number }[] = [];
+
+    for (let i = 0; i < SPEED_CHECK_READINGS; i++) {
+      if (i > 0) await sleep(SPEED_CHECK_INTERVAL_MS);
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      readings.push({
+        lat: loc.coords.latitude,
+        lng: loc.coords.longitude,
+        time: Date.now(),
+      });
+    }
+
+    if (readings.length < 2) return null;
+
+    let totalDistM = 0;
+    let totalTimeMs = 0;
+    for (let i = 1; i < readings.length; i++) {
+      totalDistM += haversineM(
+        readings[i - 1].lat,
+        readings[i - 1].lng,
+        readings[i].lat,
+        readings[i].lng
+      );
+      totalTimeMs += readings[i].time - readings[i - 1].time;
+    }
+
+    if (totalTimeMs === 0) return 0;
+    const speedMs = totalDistM / (totalTimeMs / 1000);
+    const speedKmh = speedMs * 3.6;
+    return Math.round(speedKmh * 10) / 10;
+  } catch {
+    console.log("[Geofence] Speed check failed — GPS error");
+    return null;
+  }
+}
+
 // ── Background task definition ─────────────────────────
 
 interface GeofenceTaskData {
@@ -128,6 +181,18 @@ TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data, error }) => {
   if (eventType === Location.GeofencingEventType.Enter) {
     console.log(`[Geofence] ENTER warehouse ${warehouseId} at (${lat}, ${lng}) acc=${acc}m`);
 
+    // Speed check: take 3 GPS readings over 30s to determine if driver is stopped or passing
+    const speedKmh = await measureSpeed();
+
+    if (speedKmh != null && speedKmh > SPEED_THRESHOLD_KMH) {
+      console.log(`[Geofence] Speed check: ${speedKmh} km/h — prolazi (ignoring enter)`);
+      return;
+    }
+
+    console.log(
+      `[Geofence] Speed check: ${speedKmh != null ? `${speedKmh} km/h — stoji` : "neuspjelo — fallback na dwell time"}`
+    );
+
     await recordEnterTimestamp(warehouseId);
 
     try {
@@ -159,7 +224,7 @@ TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data, error }) => {
       const dwellMs = Date.now() - enterTs;
       if (dwellMs < MIN_DWELL_MS) {
         console.log(
-          `[Geofence] Ignoring exit — dwell ${Math.round(dwellMs / 1000)}s < 5 min (pass-through)`
+          `[Geofence] Ignoring exit — dwell ${Math.round(dwellMs / 1000)}s < 10 min (pass-through)`
         );
         await clearEnterTimestamp(warehouseId);
         return;
