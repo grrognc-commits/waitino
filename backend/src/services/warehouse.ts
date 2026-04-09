@@ -1,6 +1,13 @@
-import { eq, and, sql, ilike } from "drizzle-orm";
+import { eq, and, sql, ilike, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { warehouses, warehouseDepartments, checkins } from "../db/schema";
+import {
+  warehouses,
+  warehouseDepartments,
+  checkins,
+  geofenceEvents,
+  alerts,
+  rolloverOrders,
+} from "../db/schema";
 
 export async function listWarehouses(filters: {
   chain?: string;
@@ -221,4 +228,61 @@ export async function updateWarehouse(
     .returning();
 
   return updated ?? null;
+}
+
+export async function listAllWarehousesAdmin() {
+  return db
+    .select({
+      id: warehouses.id,
+      name: warehouses.name,
+      slug: warehouses.slug,
+      address: warehouses.address,
+      city: warehouses.city,
+      chain: warehouses.chain,
+      latitude: warehouses.latitude,
+      longitude: warehouses.longitude,
+      gateLatitude: warehouses.gateLatitude,
+      gateLongitude: warehouses.gateLongitude,
+      geofenceRadius: warehouses.geofenceRadius,
+      isActive: warehouses.isActive,
+    })
+    .from(warehouses)
+    .orderBy(warehouses.name);
+}
+
+async function deleteWarehouseRelated(warehouseId: number) {
+  // Get checkin IDs for this warehouse (needed for rollover_orders FK)
+  const whCheckins = await db
+    .select({ id: checkins.id })
+    .from(checkins)
+    .where(eq(checkins.warehouseId, warehouseId));
+  const checkinIds = whCheckins.map((c) => c.id);
+
+  if (checkinIds.length > 0) {
+    await db.delete(rolloverOrders).where(inArray(rolloverOrders.originalCheckinId, checkinIds));
+  }
+  // rollover_orders also references warehouse_id directly
+  await db.delete(rolloverOrders).where(eq(rolloverOrders.warehouseId, warehouseId));
+  await db.delete(geofenceEvents).where(eq(geofenceEvents.warehouseId, warehouseId));
+  await db.delete(alerts).where(eq(alerts.warehouseId, warehouseId));
+  await db.delete(checkins).where(eq(checkins.warehouseId, warehouseId));
+  await db.delete(warehouseDepartments).where(eq(warehouseDepartments.warehouseId, warehouseId));
+}
+
+export async function deleteWarehouse(id: number): Promise<boolean> {
+  const [wh] = await db.select({ id: warehouses.id }).from(warehouses).where(eq(warehouses.id, id));
+  if (!wh) return false;
+
+  await deleteWarehouseRelated(id);
+  await db.delete(warehouses).where(eq(warehouses.id, id));
+  return true;
+}
+
+export async function deleteAllWarehouses(): Promise<number> {
+  const all = await db.select({ id: warehouses.id }).from(warehouses);
+  for (const wh of all) {
+    await deleteWarehouseRelated(wh.id);
+  }
+  await db.delete(warehouses);
+  return all.length;
 }
