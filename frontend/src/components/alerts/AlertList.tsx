@@ -1,5 +1,6 @@
 import { Clock, UserX, RefreshCw, TrendingUp } from "lucide-react";
 import api from "@/services/api";
+import { formatRelativeTime } from "@/utils/dateFormat";
 import type { AlertItem } from "@/types/alerts";
 
 const ALERT_CONFIG: Record<
@@ -32,18 +33,6 @@ const ALERT_CONFIG: Record<
   },
 };
 
-function formatTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-
-  if (diffMin < 1) return "upravo";
-  if (diffMin < 60) return `prije ${diffMin} min`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `prije ${diffH}h`;
-  return d.toLocaleDateString("hr-HR");
-}
 
 interface Props {
   alerts: AlertItem[];
@@ -111,7 +100,7 @@ export function AlertList({ alerts, onMarkRead }: Props) {
                 {alert.message}
               </p>
               <p className="mt-1 text-xs text-gray-400">
-                {formatTime(alert.createdAt)}
+                {formatRelativeTime(alert.createdAt)}
               </p>
             </div>
           </button>

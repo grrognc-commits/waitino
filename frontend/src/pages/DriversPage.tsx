@@ -21,6 +21,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { DriverDetailPanel } from "@/components/drivers/DriverDetailPanel";
+import { formatTime, useTimeFormat } from "@/utils/dateFormat";
 import type { DriverItem } from "@/types/drivers";
 import type { ApiResponse } from "@/types/auth";
 
@@ -38,6 +39,7 @@ type SortKey = "name" | "currentStatus" | "location" | "waitMinutes";
 type SortDir = "asc" | "desc";
 
 export function DriversPage() {
+  const tf = useTimeFormat();
   const [drivers, setDrivers] = useState<DriverItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -290,10 +292,7 @@ export function DriversPage() {
                   </TableCell>
                   <TableCell className="text-gray-600">
                     {driver.waitSince
-                      ? new Date(driver.waitSince).toLocaleTimeString("hr-HR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                      ? formatTime(driver.waitSince, tf)
                       : "—"}
                     {driver.waitMinutes != null && (
                       <span className="ml-1 text-xs text-gray-400">

@@ -11,6 +11,7 @@ import type { CheckinHistoryItem } from "../store";
 import { Colors } from "../constants/colors";
 import { SkeletonList } from "../components/SkeletonRow";
 import { ErrorState } from "../components/ErrorState";
+import { formatTime, formatDateTime, useTimeFormat } from "../utils/dateFormat";
 
 const CARGO_LABELS: Record<string, string> = {
   frozen: "Smrznuto",
@@ -48,8 +49,7 @@ function LiveTimer({ enteredAt }: { enteredAt: string }) {
   );
 }
 
-function CheckinItem({ item }: { item: CheckinHistoryItem }) {
-  const date = new Date(item.enteredAt);
+function CheckinItem({ item, tf }: { item: CheckinHistoryItem; tf: "24h" | "12h" }) {
   return (
     <View style={styles.historyCard}>
       <View style={styles.historyLeft}>
@@ -57,7 +57,7 @@ function CheckinItem({ item }: { item: CheckinHistoryItem }) {
           {item.warehouseName}
         </Text>
         <Text style={styles.historyMeta}>
-          {date.toLocaleDateString("hr-HR")} {date.toLocaleTimeString("hr-HR", { hour: "2-digit", minute: "2-digit" })}
+          {formatDateTime(item.enteredAt, tf)}
           {" · "}
           {CARGO_LABELS[item.cargoType] ?? item.cargoType}
         </Text>
@@ -72,6 +72,7 @@ function CheckinItem({ item }: { item: CheckinHistoryItem }) {
 }
 
 export function MyStatusScreen() {
+  const tf = useTimeFormat();
   const { activeCheckin, fetchMyStatus, fetchRecentCheckins, recentCheckins, user } = useStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -143,10 +144,7 @@ export function MyStatusScreen() {
           <LiveTimer enteredAt={activeCheckin.enteredAt} />
 
           <Text style={styles.activeSince}>
-            Od {new Date(activeCheckin.enteredAt).toLocaleTimeString("hr-HR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            Od {formatTime(activeCheckin.enteredAt, tf)}
           </Text>
 
           {/* Cargo type */}
@@ -175,7 +173,7 @@ export function MyStatusScreen() {
       ) : (
         <View style={styles.historyList}>
           {recentCheckins.map((item) => (
-            <CheckinItem key={item.id} item={item} />
+            <CheckinItem key={item.id} item={item} tf={tf} />
           ))}
         </View>
       )}

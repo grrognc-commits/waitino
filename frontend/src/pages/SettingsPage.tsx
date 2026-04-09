@@ -5,8 +5,10 @@ import {
   Pencil,
   Search,
   AlertTriangle,
+  Clock,
 } from "lucide-react";
 import api from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +57,10 @@ const CHAIN_LABELS: Record<string, string> = {
 };
 
 export function SettingsPage() {
+  const { user } = useAuth();
+  const [timeFormat, setTimeFormat] = useState<"24h" | "12h">(
+    (user?.company?.timeFormat as "24h" | "12h") ?? "24h"
+  );
   const [warehouses, setWarehouses] = useState<AdminWarehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -150,12 +156,71 @@ export function SettingsPage() {
     );
   }
 
+  async function handleTimeFormatChange(fmt: "24h" | "12h") {
+    setTimeFormat(fmt);
+    if (user?.company?.id) {
+      try {
+        await api.patch(`/companies/${user.company.id}`, { timeFormat: fmt });
+        // Update stored user
+        const stored = localStorage.getItem("user");
+        if (stored) {
+          const u = JSON.parse(stored);
+          if (u.company) u.company.timeFormat = fmt;
+          localStorage.setItem("user", JSON.stringify(u));
+        }
+      } catch {
+        // revert on error
+        setTimeFormat(fmt === "24h" ? "12h" : "24h");
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-gray-900">Postavke</h2>
+
+      {/* Company settings */}
+      <Card>
+        <div className="p-6 space-y-4">
+          <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <Clock size={16} />
+            Postavke firme
+          </h3>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Format vremena</p>
+              <p className="text-xs text-gray-400">Koristi se na cijeloj platformi</p>
+            </div>
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+              <button
+                onClick={() => handleTimeFormatChange("24h")}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  timeFormat === "24h"
+                    ? "bg-[#1e3a5f] text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                24h
+              </button>
+              <button
+                onClick={() => handleTimeFormatChange("12h")}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  timeFormat === "12h"
+                    ? "bg-[#1e3a5f] text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                AM/PM
+              </button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">
-          Upravljanje skladištima
-        </h2>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Skladišta
+        </h3>
         <div className="flex gap-2">
           <Button
             variant="destructive"

@@ -102,6 +102,7 @@ export const companies = pgTable("companies", {
   contactPhone: text("contact_phone").notNull(),
   ruterinoCompanyId: integer("ruterino_company_id"),
   plan: planEnum("plan").notNull().default("free"),
+  timeFormat: text("time_format").notNull().default("24h"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -9,6 +9,7 @@ export interface User {
     id: number;
     name: string;
     slug: string;
+    timeFormat?: string;
   } | null;
 }
 

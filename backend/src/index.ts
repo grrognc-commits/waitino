@@ -10,6 +10,7 @@ import checkinRouter from "./routes/checkins";
 import dashboardRouter from "./routes/dashboard";
 import rolloverRouter from "./routes/rollovers";
 import integrationRouter from "./routes/integration";
+import companyRouter from "./routes/companies";
 import { errorHandler } from "./middleware/errorHandler";
 import { initSocket } from "./socket";
 import { generateAlerts } from "./services/checkin";
@@ -38,6 +39,7 @@ app.use("/api/checkins", checkinRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/rollovers", rolloverRouter);
 app.use("/api/integration", integrationRouter);
+app.use("/api/companies", companyRouter);
 
 app.use(errorHandler);
 

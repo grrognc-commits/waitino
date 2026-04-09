@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import api from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatDateTime, useTimeFormat } from "@/utils/dateFormat";
 import type { DriverItem, CheckinHistoryItem, CheckinHistoryResponse } from "@/types/drivers";
 import type { ApiResponse } from "@/types/auth";
 
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function DriverDetailPanel({ driver, onClose }: Props) {
+  const tf = useTimeFormat();
   const [history, setHistory] = useState<CheckinHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -189,11 +191,7 @@ export function DriverDetailPanel({ driver, onClose }: Props) {
                       {h.warehouseName}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {new Date(h.enteredAt).toLocaleDateString("hr-HR")}{" "}
-                      {new Date(h.enteredAt).toLocaleTimeString("hr-HR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatDateTime(h.enteredAt, tf)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

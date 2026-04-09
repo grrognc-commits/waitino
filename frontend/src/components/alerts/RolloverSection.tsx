@@ -2,6 +2,7 @@ import { RefreshCw, Check, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import api from "@/services/api";
+import { formatDate } from "@/utils/dateFormat";
 import type { RolloverItem } from "@/types/alerts";
 
 const REASON_LABELS: Record<string, string> = {
@@ -67,7 +68,7 @@ export function RolloverSection({ rollovers, onResolved, onNewClick }: Props) {
                   </Badge>
                   <span className="text-xs text-gray-400">
                     Preraspoređeno:{" "}
-                    {new Date(r.rescheduledDate).toLocaleDateString("hr-HR")}
+                    {formatDate(r.rescheduledDate)}
                   </span>
                 </div>
               </div>

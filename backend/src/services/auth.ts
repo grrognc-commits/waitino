@@ -130,7 +130,7 @@ export async function login(email: string, password: string) {
       .select()
       .from(companies)
       .where(eq(companies.id, user.companyId));
-    company = c ? { id: c.id, name: c.name, slug: c.slug } : null;
+    company = c ? { id: c.id, name: c.name, slug: c.slug, timeFormat: c.timeFormat } : null;
   }
 
   return {
