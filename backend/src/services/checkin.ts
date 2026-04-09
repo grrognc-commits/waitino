@@ -45,6 +45,59 @@ export async function enter(data: {
     return { checkin: existing, created: false };
   }
 
+  // ── Working hours check ─────────────────────────────
+  const [wh] = await db
+    .select({
+      opensAt: warehouses.opensAt,
+      closesAt: warehouses.closesAt,
+      toleranceMinutes: warehouses.toleranceMinutes,
+      worksSaturday: warehouses.worksSaturday,
+      worksSunday: warehouses.worksSunday,
+    })
+    .from(warehouses)
+    .where(eq(warehouses.id, data.warehouseId));
+
+  const now = new Date();
+  let effectiveEnteredAt = now;
+
+  if (wh?.opensAt != null) {
+    // Day-of-week check (0=Sunday, 6=Saturday)
+    const dayOfWeek = now.getDay();
+    if (dayOfWeek === 0 && !wh.worksSunday) {
+      return { checkin: null, created: false, rejected: true, message: "Skladište ne radi nedjeljom" };
+    }
+    if (dayOfWeek === 6 && !wh.worksSaturday) {
+      return { checkin: null, created: false, rejected: true, message: "Skladište ne radi subotom" };
+    }
+
+    // Parse opens_at "HH:MM"
+    const [openH, openM] = wh.opensAt.split(":").map(Number);
+    const opensDate = new Date(now);
+    opensDate.setHours(openH, openM, 0, 0);
+
+    // Before opening time → reject
+    if (now < opensDate) {
+      return { checkin: null, created: false, rejected: true, message: "Skladište još nije otvoreno", queued: true };
+    }
+
+    // Within tolerance window → snap entered_at to opens + tolerance
+    const toleranceMs = (wh.toleranceMinutes ?? 30) * 60_000;
+    const effectiveStart = new Date(opensDate.getTime() + toleranceMs);
+    if (now < effectiveStart) {
+      effectiveEnteredAt = effectiveStart;
+    }
+
+    // After closing time → reject
+    if (wh.closesAt != null) {
+      const [closeH, closeM] = wh.closesAt.split(":").map(Number);
+      const closesDate = new Date(now);
+      closesDate.setHours(closeH, closeM, 0, 0);
+      if (now > closesDate) {
+        return { checkin: null, created: false, rejected: true, message: "Skladište je zatvoreno" };
+      }
+    }
+  }
+
   // Create geofence event
   await db.insert(geofenceEvents).values({
     driverId: data.driverId,
@@ -66,7 +119,7 @@ export async function enter(data: {
       departmentId: data.departmentId ?? null,
       cargoType: (data.cargoType ?? "ambient") as "frozen" | "chilled" | "ambient" | "mixed",
       hasAppointment: data.hasAppointment ?? false,
-      enteredAt: new Date(),
+      enteredAt: effectiveEnteredAt,
       source: "geofence_auto",
       status: "waiting",
     })

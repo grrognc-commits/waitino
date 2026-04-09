@@ -136,6 +136,11 @@ export const warehouses = pgTable("warehouses", {
   gateLongitude: real("gate_longitude").notNull(),
   geofenceRadius: integer("geofence_radius").notNull().default(150),
   chain: chainEnum("chain").notNull(),
+  opensAt: text("opens_at"),           // e.g. "07:00"
+  closesAt: text("closes_at"),         // e.g. "22:00"
+  toleranceMinutes: integer("tolerance_minutes").notNull().default(30),
+  worksSaturday: boolean("works_saturday").notNull().default(true),
+  worksSunday: boolean("works_sunday").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Circle, useMapEvents, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ const pinIcon = L.divIcon({
   iconAnchor: [10, 10],
 });
 
-interface WarehouseData {
+export interface WarehouseData {
   id?: number;
   name: string;
   slug: string;
@@ -30,10 +30,15 @@ interface WarehouseData {
   gateLatitude: number;
   gateLongitude: number;
   geofenceRadius: number;
+  opensAt: string | null;
+  closesAt: string | null;
+  toleranceMinutes: number;
+  worksSaturday: boolean;
+  worksSunday: boolean;
 }
 
 interface Props {
-  warehouse: WarehouseData | null; // null = new
+  warehouse: WarehouseData | null;
   onSave: (data: WarehouseData) => Promise<void>;
   onClose: () => void;
 }
@@ -52,22 +57,18 @@ export function WarehouseEditModal({ warehouse, onSave, onClose }: Props) {
 
   const [form, setForm] = useState<WarehouseData>(() =>
     warehouse ?? {
-      name: "",
-      slug: "",
-      address: "",
-      city: "",
-      chain: "other",
-      latitude: 45.815,
-      longitude: 15.982,
-      gateLatitude: 45.815,
-      gateLongitude: 15.982,
+      name: "", slug: "", address: "", city: "", chain: "other",
+      latitude: 45.815, longitude: 15.982,
+      gateLatitude: 45.815, gateLongitude: 15.982,
       geofenceRadius: 150,
+      opensAt: "07:00", closesAt: "22:00",
+      toleranceMinutes: 30,
+      worksSaturday: true, worksSunday: false,
     }
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Auto-generate slug from name
   useEffect(() => {
     if (isNew) {
       const slug = form.name
@@ -109,9 +110,9 @@ export function WarehouseEditModal({ warehouse, onSave, onClose }: Props) {
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/30" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-10">
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-6">
         <div
-          className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-xl"
+          className="w-full max-w-[900px] min-h-[600px] rounded-xl border border-gray-200 bg-white shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -124,15 +125,15 @@ export function WarehouseEditModal({ warehouse, onSave, onClose }: Props) {
             </Button>
           </div>
 
-          <div className="space-y-4 p-6">
+          <div className="space-y-5 p-6">
             {error && (
               <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
             )}
 
-            {/* Map */}
+            {/* Map — large */}
             <div>
               <Label>Lokacija ulaza za kamione (klikni na kartu)</Label>
-              <div className="mt-2 h-64 overflow-hidden rounded-lg border border-gray-200">
+              <div className="mt-2 h-[400px] overflow-hidden rounded-lg border border-gray-200">
                 <MapContainer
                   center={[form.gateLatitude, form.gateLongitude]}
                   zoom={15}
@@ -140,6 +141,7 @@ export function WarehouseEditModal({ warehouse, onSave, onClose }: Props) {
                   zoomControl={false}
                 >
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <ZoomControl position="topright" />
                   <MapClickHandler onClick={handleMapClick} />
                   <Marker position={[form.gateLatitude, form.gateLongitude]} icon={pinIcon} />
                   <Circle
@@ -154,34 +156,108 @@ export function WarehouseEditModal({ warehouse, onSave, onClose }: Props) {
               </p>
             </div>
 
-            {/* Radius slider */}
+            {/* Geofence radius slider */}
             <div>
               <div className="flex items-center justify-between">
                 <Label>Geofence radijus</Label>
                 <span className="text-sm font-semibold text-gray-900">{form.geofenceRadius} m</span>
               </div>
               <input
-                type="range"
-                min={50}
-                max={500}
-                step={10}
+                type="range" min={50} max={500} step={10}
                 value={form.geofenceRadius}
                 onChange={(e) => setForm((f) => ({ ...f, geofenceRadius: parseInt(e.target.value, 10) }))}
                 className="mt-2 w-full accent-[#1e3a5f]"
               />
               <div className="flex justify-between text-xs text-gray-400">
-                <span>50m</span>
-                <span>500m</span>
+                <span>50m</span><span>500m</span>
               </div>
             </div>
 
-            {/* Fields */}
+            {/* ── Working hours section ───────────────── */}
+            <div className="rounded-lg border border-gray-200 p-4 space-y-4">
+              <h4 className="text-sm font-semibold text-gray-900">Radno vrijeme</h4>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="wh-opens">Otvara</Label>
+                  <Input
+                    id="wh-opens" type="time"
+                    value={form.opensAt ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, opensAt: e.target.value || null }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="wh-closes">Zatvara</Label>
+                  <Input
+                    id="wh-closes" type="time"
+                    value={form.closesAt ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, closesAt: e.target.value || null }))}
+                  />
+                </div>
+              </div>
+
+              {/* Tolerance slider */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <Label>Tolerancija nakon otvaranja</Label>
+                  <span className="text-sm font-semibold text-gray-900">{form.toleranceMinutes} min</span>
+                </div>
+                <input
+                  type="range" min={0} max={60} step={5}
+                  value={form.toleranceMinutes}
+                  onChange={(e) => setForm((f) => ({ ...f, toleranceMinutes: parseInt(e.target.value, 10) }))}
+                  className="mt-2 w-full accent-[#1e3a5f]"
+                />
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>0 min</span><span>60 min</span>
+                </div>
+              </div>
+
+              {/* Day toggles */}
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, worksSaturday: !f.worksSaturday }))}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      form.worksSaturday ? "bg-[#1e3a5f]" : "bg-gray-300"
+                    }`}
+                  >
+                    <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      form.worksSaturday ? "translate-x-5" : "translate-x-0"
+                    }`} />
+                  </button>
+                  <span className="text-sm text-gray-700">Subota</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, worksSunday: !f.worksSunday }))}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      form.worksSunday ? "bg-[#1e3a5f]" : "bg-gray-300"
+                    }`}
+                  >
+                    <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      form.worksSunday ? "translate-x-5" : "translate-x-0"
+                    }`} />
+                  </button>
+                  <span className="text-sm text-gray-700">Nedjelja</span>
+                </label>
+              </div>
+
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Čekanje se ne bilježi prije otvaranja + tolerancije. Npr. ako skladište otvara u 7:00
+                s tolerancijom 30 min, čekanje se počinje bilježiti od 7:30.
+                Ostavite prazno za skladišta bez ograničenja radnog vremena.
+              </p>
+            </div>
+
+            {/* ── Fields ─────────────────────────────── */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="wh-name">Ime</Label>
                 <Input
-                  id="wh-name"
-                  value={form.name}
+                  id="wh-name" value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="Kaufland DC Jastrebarsko"
                 />
@@ -189,8 +265,7 @@ export function WarehouseEditModal({ warehouse, onSave, onClose }: Props) {
               <div className="space-y-2">
                 <Label htmlFor="wh-chain">Lanac</Label>
                 <select
-                  id="wh-chain"
-                  value={form.chain}
+                  id="wh-chain" value={form.chain}
                   onChange={(e) => setForm((f) => ({ ...f, chain: e.target.value }))}
                   className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/40"
                 >
@@ -203,22 +278,15 @@ export function WarehouseEditModal({ warehouse, onSave, onClose }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="wh-address">Adresa</Label>
-              <Input
-                id="wh-address"
-                value={form.address}
+              <Input id="wh-address" value={form.address}
                 onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                placeholder="Ulica i broj"
-              />
+                placeholder="Ulica i broj" />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="wh-city">Grad</Label>
-              <Input
-                id="wh-city"
-                value={form.city}
+              <Input id="wh-city" value={form.city}
                 onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-                placeholder="Zagreb"
-              />
+                placeholder="Zagreb" />
             </div>
 
             {/* Actions */}

@@ -184,6 +184,11 @@ export async function createWarehouse(data: {
   gateLongitude: number;
   geofenceRadius?: number;
   chain: string;
+  opensAt?: string;
+  closesAt?: string;
+  toleranceMinutes?: number;
+  worksSaturday?: boolean;
+  worksSunday?: boolean;
 }) {
   const [warehouse] = await db
     .insert(warehouses)
@@ -198,6 +203,11 @@ export async function createWarehouse(data: {
       gateLongitude: data.gateLongitude,
       geofenceRadius: data.geofenceRadius ?? 150,
       chain: data.chain as typeof warehouses.$inferInsert.chain,
+      opensAt: data.opensAt ?? null,
+      closesAt: data.closesAt ?? null,
+      toleranceMinutes: data.toleranceMinutes ?? 30,
+      worksSaturday: data.worksSaturday ?? true,
+      worksSunday: data.worksSunday ?? false,
     })
     .returning();
 
@@ -217,6 +227,11 @@ export async function updateWarehouse(
     geofenceRadius: number;
     chain: string;
     isActive: boolean;
+    opensAt: string | null;
+    closesAt: string | null;
+    toleranceMinutes: number;
+    worksSaturday: boolean;
+    worksSunday: boolean;
   }>
 ) {
   const values: Record<string, unknown> = { ...data, updatedAt: new Date() };
@@ -244,6 +259,11 @@ export async function listAllWarehousesAdmin() {
       gateLatitude: warehouses.gateLatitude,
       gateLongitude: warehouses.gateLongitude,
       geofenceRadius: warehouses.geofenceRadius,
+      opensAt: warehouses.opensAt,
+      closesAt: warehouses.closesAt,
+      toleranceMinutes: warehouses.toleranceMinutes,
+      worksSaturday: warehouses.worksSaturday,
+      worksSunday: warehouses.worksSunday,
       isActive: warehouses.isActive,
     })
     .from(warehouses)

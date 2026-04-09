@@ -44,6 +44,16 @@ router.post(
         hasAppointment: has_appointment,
       });
 
+      if ("rejected" in result && result.rejected) {
+        res.json({
+          success: true,
+          data: null,
+          message: result.message,
+          queued: "queued" in result ? result.queued : false,
+        });
+        return;
+      }
+
       if (!result.created) {
         res.json({
           success: true,

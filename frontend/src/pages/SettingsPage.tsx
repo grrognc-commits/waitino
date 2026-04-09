@@ -34,6 +34,11 @@ interface AdminWarehouse {
   gateLatitude: number;
   gateLongitude: number;
   geofenceRadius: number;
+  opensAt: string | null;
+  closesAt: string | null;
+  toleranceMinutes: number;
+  worksSaturday: boolean;
+  worksSunday: boolean;
   isActive: boolean;
 }
 
