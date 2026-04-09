@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Waitino",
+    "slug": "waitino",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1e3a5f"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "hr.waitino.app",
+      "infoPlist": {
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Waitino koristi vašu lokaciju za automatsko praćenje dolaska na skladište.",
+        "NSLocationWhenInUseUsageDescription": "Waitino koristi vašu lokaciju za prikaz na karti.",
+        "NSLocationAlwaysUsageDescription": "Waitino koristi vašu lokaciju u pozadini za geofencing.",
+        "UIBackgroundModes": ["location", "fetch"]
+      }
+    },
+    "android": {
+      "package": "hr.waitino.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1e3a5f"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Waitino koristi vašu lokaciju za automatsko praćenje dolaska na skladište.",
+          "locationAlwaysPermission": "Waitino koristi vašu lokaciju u pozadini za geofencing.",
+          "locationWhenInUsePermission": "Waitino koristi vašu lokaciju za prikaz na karti.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1e3a5f"
+        }
+      ]
+    ]
+  }
+}
