@@ -21,7 +21,13 @@ const PORT = process.env.PORT || 3001;
 // Socket.IO
 initSocket(server);
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://terrific-bravery-production-78c1.up.railway.app",
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use("/api/health", healthRouter);
